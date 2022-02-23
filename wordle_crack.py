@@ -6,13 +6,39 @@ the word in three or four attempts.
 """
 
 
-"""Strategies
+"""Definition:
 
-Strategy 1:
+Word = seq(Char)
+Perm = set(Char)
+Word2Perm: Word -> Perm
+Perm2Word: Word -> set(Perm)
+PermIndex: Perm -> Number -> Number
+   PermIndex[p][c] gives the number of words whose permutation
+   p' is a subset of p and #p' = c
 
-Given a set of 5 letter words, find a word that covers the most words.
-Remove all the words covered from the list of words.
-Repeat until there are no words left. 
+PermCoverage: Perm -> Number
+   PermCoverage[p] = Sum PermIndex[p][c] for all c
+
+OverlapCount: Perm x Perm -> Number
+   Number of characters common in two permutations
+
+OverlapIndex: Perm -> Number -> set(Perm)
+  OverlapIndex[p][c] gives the set of Perms with which p has overlap count of c.
+
+PermWeight: Perm -> Number
+  PermWeight[p] = c * len(OverlapIndex(p)[c]) for all c
+
+Strategy:
+   Compute perms for all Words
+   Keep perms of length 5
+   While there is a perm remaining:
+      Compute PermWeight of all perms
+      Select a perm with the highest PermWeight
+      Remove all perms with non-zero OverlapCount with selected perm
+   
+
+Strategies
+ 
 
 Strategy 2:
 
@@ -74,7 +100,7 @@ class LetterSet(object):
     return str(self.letters)
 
 def get_letters(word):
-  return LetterSet(word)
+  return str(LetterSet(word))
 
 class LetterBag(object):
   def __init__(self, word):
@@ -83,10 +109,12 @@ class LetterBag(object):
     return str(self.letters)
 
 def get_anagram(word):
-  return LetterBag(word)
+  return str(LetterBag(word))
 
 class Anagram(object):
   def __init__(self):
+    # word list 
+    self.word_list = []
     # covered: LetterSet -> set(words)
     self.covered = defaultdict(lambda: set())
     # anagrams: LetterBag -> set(words)  
@@ -97,6 +125,7 @@ class Anagram(object):
     self.anagram_coverage = defaultdict(lambda:set())
 
   def process_word(self, word):
+    self.word_list.append(word)
     letters = get_letters(word)
     anagram = get_anagram(word)
     self.covered[letters].add(word)
@@ -107,3 +136,14 @@ class Anagram(object):
     for _anagram in self.anagrams.keys():
       for _letters in self.anagram_subset[_anagram]:
         self.anagram_coverage[_anagram].update(self.covered[_letters])
+
+if __name__ == "__main__":
+  wordfile = "wordlist.txt"
+  anagram = Anagram()
+  with open(wordfile, "r") as fp:
+    for word in fp.readlines():
+      word = word.strip()
+      anagram.process_word(word)
+
+  print("Words: {} Anagrams: {}".format(len(anagram.word_list), len(anagram.anagrams.keys())))
+
