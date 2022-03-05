@@ -11,7 +11,7 @@ the word in three or four attempts.
 Word = seq(Char)
 Perm = set(Char)
 Word2Perm: Word -> Perm
-Perm2Word: Word -> set(Perm)
+Perm2Word: Perm -> set(Word)
 PermIndex: Perm -> Number -> Number
    PermIndex[p][c] gives the number of words whose permutation
    p' is a subset of p and #p' = c
@@ -37,113 +37,78 @@ Strategy:
       Remove all perms with non-zero OverlapCount with selected perm
    
 
-Strategies
- 
-
-Strategy 2:
-
-For a given set of words, find a word that has no duplicate letters and covers the most words.
-Remove all the words covered from the list of words, remove all the covered letters.
-Repeat until until there are no letters or no words left. 
-
-"""
-
-"""Algorithm
-
-- Function:
-    letter_count: word -> letter -> count
-
-- Read the list of words and construct the following tables:
-  - letter_frequency: letter -> duplicate -> count
-      where duplicate is value from 0 to 5
-        letter_frequency[c][i] gives the number of words where letter c appears at least i times.
-
-  - covered: seq(letter) -> set(words)
-      covered[C] = {W, ..} where
-      - C is an ordered sequence of unique letters and
-      - W is a word that is made up of only letters in C (possibly repeating)
-  - anagrams: seq(letter) -> set(words)  
-      anagrams[A] = {W, ..} where
-        - A is an ordered sequence of letters, same length as W and
-        - W is a word that is an anagram of those letters
-
-  - anagram_subset: seq(letter) -> set(seq(letter))
-      anagram_subset[A] = { C, ..} where 
-        - A is an index in anagrams
-        - C is an index in covered and 
-        - C is a subset of A
-
-- Use the above compute the following
-  - anagram_coverage: seq(letter) -> set(words)
-    anagram_coverage[A] = {W, ..} where
-      exists C in anagram_subset[A] and
-      W is in covered[C]
-  
-- Implementing Stategies
-  sort anagram_coverage on decreasing order of length of words
-  pick anagram A with most words
-  selected_anagrams = [A]
-  for A' in anagram_coverage.keys():
-    if strategy 2:
-    -   continue if A' has non-zero intersection with anagram in selected_anagrams
-    - put A' in selected_anagrams
-  
-  selected_anagrams gives the list of words to choose.
-  
 """
 from collections import defaultdict
 
-class LetterSet(object):
+from pytest import PytestUnknownMarkWarning
+
+class Perm(object):
   def __init__(self, word):
     self.letters = sorted(list(set(word)))
+  def overlap_count(self, __o) -> int:
+    return len (set(self.letters) & set(__o.letters))
+  def __hash__(self) -> int:
+      return hash(str(self))
+  def __eq__(self, __o: object) -> bool:
+      return str(self.letters) == str(__o.letters)
   def __str__(self):
     return str(self.letters)
-
-def get_letters(word):
-  return str(LetterSet(word))
-
-class LetterBag(object):
-  def __init__(self, word):
-    self.letters = sorted(list(word))
-  def __str__(self):
+  def __repr__(self):
     return str(self.letters)
 
-def get_anagram(word):
-  return str(LetterBag(word))
-
-class Anagram(object):
+def word2perm(word):
+  return Perm(word)
+class WordleDictionary(object):
   def __init__(self):
     # word list 
     self.word_list = []
-    # covered: LetterSet -> set(words)
-    self.covered = defaultdict(lambda: set())
-    # anagrams: LetterBag -> set(words)  
-    self.anagrams = defaultdict(lambda:set())
-    # anagram_subset: LetterBag -> set(LetterSet)
-    self.anagram_subset = defaultdict(lambda: set())
-    # anagrams_coverage: LetterBag -> set(words)  
-    self.anagram_coverage = defaultdict(lambda:set())
+    # perm2words: Perm -> set(words)
+    self.perm2words = defaultdict(lambda: set())
 
   def process_word(self, word):
     self.word_list.append(word)
-    letters = get_letters(word)
-    anagram = get_anagram(word)
-    self.covered[letters].add(word)
-    self.anagrams[anagram].add(word)
-    self.anagram_subset[anagram].add(letters)
+    perm = word2perm(word)
+    self.perm2words[perm].add(word)
 
-  def compute_anagram_coverage(self):
-    for _anagram in self.anagrams.keys():
-      for _letters in self.anagram_subset[_anagram]:
-        self.anagram_coverage[_anagram].update(self.covered[_letters])
+  def filter_maxperms(self):
+    self.maxperms = []
+    for perm in self.perm2words.keys():
+      if len(perm.letters) == 5:
+        self.maxperms.append(perm)
+
+  def compute_perm_weights(self, perms_list):
+    perm_weights = defaultdict(lambda:0)
+    for p1 in perms_list[0:-1]:
+      for p2 in perms_list[1:]:
+        c = p1.overlap_count(p2)
+        perm_weights[p1] += c
+        perm_weights[p2] += c
+    return perm_weights
+
+  def find_largest_perm_weight(self, perm_weights):
+    keyfn = lambda x: perm_weights[x]
+    pordered = sorted(perm_weights.keys(), key=keyfn, reverse=True)
+    return pordered[0]
+  
+  def find_wordle_order(self):
+    self.filter_maxperms()
+    work_list = self.maxperms
+    while len(work_list) > 0:
+      perm_weights = self.compute_perm_weights(work_list)
+      largest_perm = self.find_largest_perm_weight(perm_weights)
+      print(largest_perm, perm_weights[largest_perm])
+      filterfn = lambda x: x.overlap_count(largest_perm) == 0
+      work_list = list(filter(filterfn, work_list))
+
+  def ingest_words(self, word_stream):
+    for word in word_stream:
+      self.process_word(word)
 
 if __name__ == "__main__":
   wordfile = "wordlist.txt"
-  anagram = Anagram()
+  wordle = WordleDictionary()
   with open(wordfile, "r") as fp:
-    for word in fp.readlines():
-      word = word.strip()
-      anagram.process_word(word)
+    wordle.ingest_words(map(lambda word: word.strip(), fp.readlines()))
+  wordle.find_wordle_order()
 
-  print("Words: {} Anagrams: {}".format(len(anagram.word_list), len(anagram.anagrams.keys())))
 

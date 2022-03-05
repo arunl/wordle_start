@@ -2,7 +2,7 @@ from ast import Assert
 from cmath import exp
 from webbrowser import get
 import pytest
-from wordle_crack import get_letters, get_anagram, Anagram
+from wordle_crack import word2perm, WordleDictionary
 
 word_testdata = [
   ('', [], []),
@@ -13,51 +13,36 @@ word_testdata = [
 ]
 @pytest.mark.parametrize("word,letters,anagram", word_testdata)
 def test_get_letters(word, letters, anagram):
-  actual = get_letters(word)
+  actual = word2perm(word)
   assert str(actual) == str(letters)
 
-@pytest.mark.parametrize("word,letters,anagram", word_testdata)
-def test_anagram(word, letters, anagram):
-  actual = get_anagram(word)
-  assert str(actual) == str(anagram)
+overlap_testdata = [
+  ('proud', 'misty', 0),
+  ('proud', 'pride', 3),
+  ('moody', 'body', 3),
+]
 
-anagram_testdata = [
+@pytest.mark.parametrize('word1,word2,expected', overlap_testdata)
+def test_overlap_count(word1, word2, expected):
+  p1 = word2perm(word1)
+  p2 = word2perm(word2)
+  overlap1 = p1.overlap_count(p2)
+  overlap2 = p2.overlap_count(p1)
+  assert overlap1 == overlap2
+  assert overlap1 == expected
+
+perm_testdata = [
   ('word',
-    {str(['d', 'o', 'r', 'w']): {'word'} },
-    {str(['d', 'o', 'r', 'w']): {'word'}},
-    {str(['d', 'o', 'r', 'w']): {str(['d', 'o', 'r', 'w'])}}
+    {word2perm('dorw'): {'word'} }
   ),
    ('woorddr',
-    {str(['d', 'o', 'r', 'w']): {'woorddr'} },
-    {str(['d', 'd', 'o', 'o', 'r', 'r', 'w']): {'woorddr'}},
-    {str(['d', 'd', 'o', 'o', 'r', 'r', 'w']): {str(['d', 'o', 'r', 'w'])}}
+    {word2perm('dorw'): {'woorddr'} }
   )
 ]
-@pytest.mark.parametrize("word,_covered,_anagrams,_anagram_subset", anagram_testdata)
-def test_process_word(word, _covered, _anagrams, _anagram_subset):
-  a = Anagram()
+@pytest.mark.parametrize("word,_covered", perm_testdata)
+def test_process_word(word, _covered):
+  a = WordleDictionary()
   a.process_word(word)
-  assert a.covered == _covered
-  assert a.anagrams == _anagrams
-  assert a.anagram_subset == _anagram_subset
+  assert a.perm2words == _covered
 
-anagram_coverage_testdata = [
-  ('pound,misty,beach,boost,bost',
-   {'pound': {'pound'},
-    'misty': {'misty'},
-    'beach': {'beach'},
-    'boost': {'boost', 'bost'},
-    'bost': {'boost', 'bost'}}
-  )
-]
-@pytest.mark.parametrize('words,coverage_map', anagram_coverage_testdata)
-def test_anagram_coverage(words, coverage_map):
-  a = Anagram()
-  word_list = words.split(',')
-  for word in word_list:
-    a.process_word(word)
-  a.compute_anagram_coverage()
-  
-  expected = { str(get_anagram(w)): coverage_map[w] for w in coverage_map.keys() }
-  assert a.anagram_coverage == expected
   
