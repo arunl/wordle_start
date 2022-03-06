@@ -87,13 +87,11 @@ class Wordle(object):
   def compute_perm_weights(self, perms_list):
     perm_weights = defaultdict(lambda:0)
     r = range(0, len(perms_list))
-    for r1 in r[:-1]:
-      p1 = perms_list[r1]
-      for r2 in r[r1+1:]:
-        p2 = perms_list[r2]
+    for p1 in perms_list:
+      for p2 in perms_list:
         c = p1.overlap_count(p2)
-        perm_weights[p1] += c
-        perm_weights[p2] += c
+        # weight = overlap x number of words represented by p2
+        perm_weights[p1] += c * len(self.perm2words[p2])
     return perm_weights
 
   def sort_perms_by_weight(self, perm_weights):
