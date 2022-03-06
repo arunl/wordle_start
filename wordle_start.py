@@ -77,6 +77,13 @@ class Wordle(object):
     for word in word_stream:
       self.process_word(word)
 
+  def print_perm_distribution(self):
+    keyfn = lambda p: len(self.perm2words[p])
+    pordered = sorted(self.perm2words.keys(), key=keyfn, reverse=True)
+    for p in pordered:
+      if keyfn(p) > 1:
+        print(keyfn(p), p, self.perm2words[p])
+
   def find_maxperms(self):
     maxperms = []
     for perm in self.perm2words.keys():
@@ -121,5 +128,4 @@ if __name__ == "__main__":
   with open(wordfile, "r") as fp:
     wordle.ingest_words(map(lambda word: word.strip(), fp.readlines()))
   wordle.find_wordle_order()
-
-  maxperms = wordle.find_maxperms()
+  # wordle.perm_distribution()
