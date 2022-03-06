@@ -63,22 +63,23 @@ def test_find_maxperms():
 
 def test_compute_perm_weights():
   a = Wordle()
-  #a.ingest_words(['steam', 'meats', 'amaze', 'blaze', 'steem'])
+  word_list = ['steam', 'meats','blaze', 'sound', 'beach', 'pound']
+  a.ingest_words(word_list)
   maxperms = list(map(word2perm, ['steam', 'blaze', 'sound', 'beach', 'pound']))
   permweights = a.compute_perm_weights(maxperms)
   """
            steam    blaze    sound    beach   pound
-    steam x            2       1        2       0
-    blaze   2          x       0        3       0
-    sound   1          0       x        0       4
-    beach   2          3       0        x       0
-    pound   0          0       4        0       x
+    steam  5x2        2x2      1x2      2x2     0x2
+    blaze   2          5       0        3       0
+    sound   1          0       5        0       4
+    beach   2          3       0        5       0
+    pound   0          0       4        0       5
     ==================================================
-           5           5       5        5       4
+           15          12       11        12      9
   """
-  assert permweights[word2perm('steam')] == 5
-  assert permweights[word2perm('blaze')] == 5
-  assert permweights[word2perm('sound')] == 5
-  assert permweights[word2perm('beach')] == 5
-  assert permweights[word2perm('pound')] == 4
+  assert permweights[word2perm('steam')] == 15
+  assert permweights[word2perm('blaze')] == 12
+  assert permweights[word2perm('sound')] == 11
+  assert permweights[word2perm('beach')] == 12
+  assert permweights[word2perm('pound')] == 9
 
