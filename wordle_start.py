@@ -67,6 +67,7 @@ class Wordle(object):
     self.word_list = []
     # perm2words: Perm -> set(words)
     self.perm2words = defaultdict(lambda: set())
+    self.perm2words_work = self.perm2words
 
   def process_word(self, word):
     self.word_list.append(word)
@@ -84,10 +85,10 @@ class Wordle(object):
       if keyfn(p) > 1:
         print(keyfn(p), p, self.perm2words[p])
 
-  def find_maxperms(self):
+  def find_maxperms(self, perm_length):
     maxperms = []
-    for perm in self.perm2words.keys():
-      if len(perm.letters) == 5:
+    for perm in self.perm2words_work.keys():
+      if len(perm.letters) >= perm_length:
         maxperms.append(perm)
     return maxperms
 
@@ -98,7 +99,7 @@ class Wordle(object):
       for p2 in perms_list:
         c = p1.overlap_count(p2)
         # weight = overlap x number of words represented by p2
-        perm_weights[p1] += c * len(self.perm2words[p2])
+        perm_weights[p1] += c * len(self.perm2words_work[p2])
     return perm_weights
 
   def sort_perms_by_weight(self, perm_weights):
@@ -106,8 +107,9 @@ class Wordle(object):
     pordered = sorted(perm_weights.keys(), key=keyfn, reverse=True)
     return pordered
   
-  def find_wordle_order(self):
-    work_list = self.find_maxperms()
+  def find_wordle_order(self, perm_length):
+    work_list = self.find_maxperms(perm_length)
+    wordle_starts = []
     while len(work_list) > 0:
       perm_weights = self.compute_perm_weights(work_list)
       ordered_perms = self.sort_perms_by_weight(perm_weights)
@@ -116,16 +118,36 @@ class Wordle(object):
       largest_weight = perm_weights[largest_perm]
       for p in ordered_perms:
         if perm_weights[p] < largest_weight:
-          print("next:", perm_weights[p], p, self.perm2words[p])
+          # print("next:", perm_weights[p], p, self.perm2words_work[p])
           break
-        print(perm_weights[p], p, self.perm2words[p])
+        wordle_starts.append(p)
+        print(perm_weights[p], p, self.perm2words_work[p])
       filterfn = lambda x: x.overlap_count(largest_perm) == 0
       work_list = list(filter(filterfn, work_list))
+    return wordle_starts
+  
+  def remove_overlaps_work(self, selected_perm):
+    current_perms = list(self.perm2words_work.keys())
+    for another_perm in current_perms:
+      if another_perm.overlap_count(selected_perm) > 0:
+        self.perm2words_work.pop(another_perm)
 
+  def find_all_orders(self):
+    wordle_starts = []
+    for perm_length in reversed(range(1,6)):
+      print(f"Permutation length {perm_length}")
+      next_starts = self.find_wordle_order(perm_length)
+      if next_starts:
+        wordle_starts += next_starts
+        for perm in next_starts:
+          self.remove_overlaps_work(perm)
+  
 if __name__ == "__main__":
   wordfile = "wordlist.txt"
   wordle = Wordle()
   with open(wordfile, "r") as fp:
     wordle.ingest_words(map(lambda word: word.strip(), fp.readlines()))
-  wordle.find_wordle_order()
+  
+  wordle.find_all_orders()
+
   # wordle.perm_distribution()

@@ -58,7 +58,7 @@ def test_ingest_word():
 def test_find_maxperms():
   a = Wordle()
   a.ingest_words(['steam', 'meats', 'amaze', 'blaze', 'steem'])
-  maxperms = a.find_maxperms()
+  maxperms = a.find_maxperms(5)
   assert set(maxperms) == set(map(word2perm, ['steam', 'blaze']))
 
 def test_compute_perm_weights():
